@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Alliance Constellation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, #0a0f1d 0%, #02050b 100%);
+            color: #ffffff;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .interface {
+            position: relative;
+            z-index: 2;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100vh;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        header {
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            letter-spacing: 4px;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0,210,255,0.3);
+        }
+
+        header p {
+            color: #6c7d93;
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        /* Звезды-аватарки */
+        .star {
+            position: absolute;
+            z-index: 3;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
+            border: 2px solid #3a7bd5;
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Особый стиль для звезды именинника */
+        .star.birthday-boy {
+            width: 75px;
+            height: 75px;
+            border: 3px solid #ffb703;
+            box-shadow: 0 0 25px rgba(255, 183, 3, 0.5);
+        }
+
+        .star:hover {
+            transform: translate(-50%, -50%) scale(1.15);
+            box-shadow: 0 0 30px rgba(0, 210, 255, 0.6);
+            z-index: 10;
+        }
+
+        .star.birthday-boy:hover {
+            box-shadow: 0 0 35px rgba(255, 183, 3, 0.8);
+        }
+
+        /* Названия игроков под звездами */
+        .star-name {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: #a1b5cc;
+            white-space: nowrap;
+            background: rgba(2, 5, 11, 0.7);
+            padding: 2px 8px;
+            border-radius: 10px;
+            pointer-events: none;
+            border: 1px solid rgba(58, 123, 213, 0.2);
+        }
+
+        /* Модальное окно с посланием */
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 90%;
+            max-width: 450px;
+            background: rgba(10, 20, 38, 0.95);
+            border: 1px solid #3a7bd5;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(58, 123, 213, 0.2);
+            border-radius: 16px;
+            padding: 25px;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(58, 123, 213, 0.2);
+            padding-bottom: 15px;
+        }
+
+        .modal-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #00d2ff;
+            background-size: cover;
+        }
+
+        .modal-title h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: #00d2ff;
+        }
+
+        .modal-title span {
+            font-size: 0.8rem;
+            color: #6c7d93;
+        }
+
+        .modal-text {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #e2e8f0;
+            font-style: italic;
+            white-space: pre-wrap;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #6c7d93;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .close-btn:hover {
+            color: #fff;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        footer {
+            text-align: center;
+            color: #4a5768;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <canvas id="sky"></canvas>
+    </div>
+
+    <div class="interface">
+        <header>
+            <h1>3 Years on the Same Orbit</h1>
+            <p>Наше общее созвездие. Нажми на любую звезду команды.</p>
+        </header>
+
+        <!-- Сюда JS вставит звезды -->
+        <div id="constellation-map"></div>
+
+        <footer>
+            ДЛЯ НАШЕГО ДРУГА И СОЮЗНИКА С ЛЮБОВЬЮ ОТ Р4 & TEAM
+        </footer>
+    </div>
+
+    <!-- Модалка для вывода сообщений -->
+    <div class="overlay" id="overlay" onclick="closeModal()"></div>
+    <div class="modal" id="modal">
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+        <div class="modal-header">
+            <div class="modal-avatar" id="modal-avatar"></div>
+            <div class="modal-title">
+                <h3 id="modal-name">Игрок</h3>
+                <span id="modal-role">Р4 / Союзник</span>
+            </div>
+        </div>
+        <div class="modal-text" id="modal-text">Текст поздравления...</div>
+    </div>
+
+    <script>
+        // ТЕСТОВЫЕ ДАННЫЕ (Потом заменим на реальные аватарки и тексты ребят)
+        const players = [
+            { id: "bday", name: "Именинник 🎂", role: "Главный Герой", text: "Сегодня твой день! Посмотри на линии вокруг — это связи, которые мы построили за 3 года игры вместе.", x: 50, y: 50, isBday: true, img: "https://placekitten.com/150/150" },
+            { id: "p1", name: "Lillith", role: "Бывший Лидер / Друг", text: "Помню, как ты спокойно помогал решать проблемы, когда я рулила. С тобой в чатах всегда тепло и комфортно, игра перестала быть стрессом! С днем рождения!", x: 25, y: 30, img: "https://placekitten.com/100/100" },
+            { id: "p2", name: "Р4_Стратег", role: "Офицер R4", text: "Три года в одной лодке — это срок. Спасибо, что всегда стабильно прикрываешь тылы без лишних слов. С др, мужик!", x: 75, y: 25, img: "https://placekitten.com/101/101" },
+            { id: "p3", name: "Боец_Альянса", role: "Союзник", text: "С праздником! Просто лучший сокомандник, с которым всегда приятно поболтать вечерком после работы.", x: 30, y: 70, img: "https://placekitten.com/102/102" },
+            { id: "p4", name: "Офицер_Драма", role: "Офицер R4", text: "Ценю твой железный покой во время войн штатов. Удачи в реале, крутой семьи и спокойных игровых вечеров!", x: 70, y: 75, img: "https://placekitten.com/103/103" },
+            { id: "p5", name: "Старый_Друг", role: "Союзник", text: "Помнишь наши первые ивенты 3 года назад? Рад, что мы до сих пор играем на одной волне. С днюхой!", x: 50, y: 15, img: "https://placekitten.com/104/104" }
+        ];
+
+        const canvas = document.getElementById('sky');
+        const ctx = canvas.getContext('2d');
+        let activeLineTarget = null;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            drawConstellation();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // Перевод процентов координат в реальные пиксели экрана
+        function getCoords(player) {
+            return {
+                x: (player.x / 100) * canvas.width,
+                y: (player.y / 100) * canvas.height
+            };
+        }
+
+        // Рисование космической сетки и линий
+        function drawConstellation() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const bdayPlayer = players.find(p => p.isBday);
+            const bdayCoords = getCoords(bdayPlayer);
+
+            // 1. Рисуем фоновые тонкие линии между ВСЕМИ (эффект созвездия-сети)
+            ctx.strokeStyle = 'rgba(58, 123, 213, 0.15)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < players.length; i++) {
+                for (let j = i + 1; j < players.length; j++) {
+                    const p1 = getCoords(players[i]);
+                    const p2 = getCoords(players[j]);
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+            }
+
+            // 2. Если кликнули на игрока, подсвечиваем его прямую связь с именинником
+            if (activeLineTarget && !activeLineTarget.isBday) {
+                const targetCoords = getCoords(activeLineTarget);
+                ctx.strokeStyle = '#00d2ff';
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#00d2ff';
+                
+                ctx.beginPath();
+                ctx.moveTo(bdayCoords.x, bdayCoords.y);
+                ctx.lineTo(targetCoords.x, targetCoords.y);
+                ctx.stroke();
+                
+                // Сбрасываем тени, чтобы не портить остальное
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // Создание элементов звезд на экране
+        function createStars() {
+            const mapContainer = document.getElementById('constellation-map');
+            mapContainer.innerHTML = '';
+
+            players.forEach(player => {
+                const star = document.createElement('div');
+                star.className = `star ${player.isBday ? 'birthday-boy' : ''}`;
+                star.style.left = `${player.x}%`;
+                star.style.top = `${player.y}%`;
+                
+                // Временные картинки заглушки (котята), потом будут аватарки
+                star.style.backgroundImage = `url('${player.img}')`;
+
+                const nameTag = document.createElement('div');
+                nameTag.className = 'star-name';
+                nameTag.innerText = player.name;
+                star.appendChild(nameTag);
+
+                star.onclick = () => openModal(player);
+
+                mapContainer.appendChild(star);
+            });
+        }
+
+        function openModal(player) {
+            activeLineTarget = player;
+            drawConstellation(); // Перерисовываем линию
+
+            document.getElementById('modal-name').innerText = player.name;
+            document.getElementById('modal-role').innerText = player.role;
+            document.getElementById('modal-text').innerText = player.text;
+            document.getElementById('modal-avatar').style.backgroundImage = `url('${player.img}')`;
+
+            document.getElementById('modal').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+        }
+
+        function closeModal() {
+            activeLineTarget = null;
+            drawConstellation();
+            document.getElementById('modal').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        }
+
+        // Запуск
+        createStars();
+        resizeCanvas();
+    </script>
+</body>
+</html>
