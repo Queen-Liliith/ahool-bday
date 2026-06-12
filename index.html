@@ -23,15 +23,22 @@
         }
 
         .interface {
-            position: relative;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
             z-index: 2;
-            pointer-events: none;
+            pointer-events: none; /* Разрешает клики сквозь контейнер */
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            height: 100vh;
             padding: 30px;
             box-sizing: border-box;
+        }
+
+        header, footer {
+            pointer-events: auto; /* Возвращает кликабельность тексту, если нужно */
         }
 
         header {
@@ -55,9 +62,17 @@
             font-size: 1rem;
         }
 
+        #constellation-map {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 3;
+        }
+
         .star {
             position: absolute;
-            z-index: 3;
             width: 60px;
             height: 60px;
             border-radius: 50%;
@@ -68,6 +83,7 @@
             border: 2px solid #3a7bd5;
             background-size: cover;
             background-position: center;
+            pointer-events: auto; /* Позволяет кликать по звездам */
         }
 
         .star.birthday-boy {
@@ -119,6 +135,7 @@
             visibility: hidden;
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
+            pointer-events: auto;
         }
 
         .modal.active {
@@ -189,6 +206,7 @@
             opacity: 0;
             visibility: hidden;
             transition: all 0.3s ease;
+            pointer-events: auto;
         }
 
         .overlay.active {
@@ -208,9 +226,8 @@
 
     <script>
         const PLAYERS_DATA = [
-            // Именинник всегда должен быть первым и иметь параметр isBday: true. Координаты 50, 50 ставят его в центр.
             { 
-                name: "Nickname 🎂", 
+                name: "Ahool 🎂", 
                 role: "The Birthday Boy", 
                 text: "Today is your day! Click on any star to read messages from your alliance team.", 
                 x: 50, 
@@ -218,8 +235,6 @@
                 isBday: true, 
                 img: "https://img.freepik.com/free-photo/cute-cat-autumn-season_23-2151833360.jpg?semt=ais_hybrid&w=740&q=80" 
             },
-
-            // Игрок 1 (Пример Lillith)
             { 
                 name: "Lillith", 
                 role: "R5", 
@@ -228,8 +243,6 @@
                 y: 30, 
                 img: "https://cdn.mamazin.com.ua/img/products_pictures/large_20240308235708607722.jpg" 
             },
-
-            // Игрок 2
             { 
                 name: "Player_R4", 
                 role: "R4 Officer", 
@@ -238,13 +251,148 @@
                 y: 25, 
                 img: "https://cdn.mamazin.com.ua/img/products_pictures/large_20240308235708607722.jpg" 
             },
-
-            // Игрок 3
             {     
                 name: "Fighter_XYZ", 
                 role: "Alliance Member", 
                 text: "Happy Birthday! It's always great to chat and hang out after a busy work day. Have an awesome one!", 
                 x: 40, 
-                y: 75,
-                    img: "https://cdn.mamazin.com.ua/img/products_pictures/large_20240308235708607722.jpg" 
-            },
+                y: 75, 
+                img: "https://cdn.mamazin.com.ua/img/products_pictures/large_20240308235708607722.jpg" 
+            }
+        ];
+    </script>
+
+    <div id="canvas-container">
+        <canvas id="sky"></canvas>
+    </div>
+
+    <div id="constellation-map"></div>
+
+    <div class="interface">
+        <header>
+            <h1>3 Years on the Same Orbit</h1>
+            <p>Our shared constellation. Click on any star of our team.</p>
+        </header>
+
+        <footer>
+            WITH LOVE FROM R4 & ALLIANCE TEAM
+        </footer>
+    </div>
+
+    <div class="overlay" id="overlay" onclick="closeModal()"></div>
+    <div class="modal" id="modal">
+        <button class="close-btn" onclick="closeModal()">&times;</button>
+        <div class="modal-header">
+            <div class="modal-avatar" id="modal-avatar"></div>
+            <div class="modal-title">
+                <h3 id="modal-name">Player</h3>
+                <span id="modal-role">R4 / Ally</span>
+            </div>
+        </div>
+        <div class="modal-text" id="modal-text">Message...</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('sky');
+        const ctx = canvas.getContext('2d');
+        let activeLineTarget = null;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            drawConstellation();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function getCoords(player) {
+            return {
+                x: (player.x / 100) * canvas.width,
+                y: (player.y / 100) * canvas.height
+            };
+        }
+
+        function drawConstellation() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const bdayPlayer = PLAYERS_DATA.find(p => p.isBday);
+            if (!bdayPlayer) return;
+            const bdayCoords = getCoords(bdayPlayer);
+
+            ctx.strokeStyle = 'rgba(58, 123, 213, 0.15)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < PLAYERS_DATA.length; i++) {
+                for (let j = i + 1; j < PLAYERS_DATA.length; j++) {
+                    const p1 = getCoords(PLAYERS_DATA[i]);
+                    const p2 = getCoords(PLAYERS_DATA[j]);
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+            }
+
+            if (activeLineTarget && !activeLineTarget.isBday) {
+                const targetCoords = getCoords(activeLineTarget);
+                ctx.strokeStyle = '#00d2ff';
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#00d2ff';
+                
+                ctx.beginPath();
+                ctx.moveTo(bdayCoords.x, bdayCoords.y);
+                ctx.lineTo(targetCoords.x, targetCoords.y);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function createStars() {
+            const mapContainer = document.getElementById('constellation-map');
+            mapContainer.innerHTML = '';
+
+            PLAYERS_DATA.forEach(player => {
+                const star = document.createElement('div');
+                star.className = `star ${player.isBday ? 'birthday-boy' : ''}`;
+                star.style.left = `${player.x}%`;
+                star.style.top = `${player.y}%`;
+                star.style.backgroundImage = `url('${player.img}')`;
+
+                const nameTag = document.createElement('div');
+                nameTag.className = 'star-name';
+                nameTag.innerText = player.name;
+                star.appendChild(nameTag);
+
+                star.onclick = () => openModal(player);
+                mapContainer.appendChild(star);
+            });
+        }
+
+        function openModal(player) {
+            activeLineTarget = player;
+            drawConstellation();
+
+            document.getElementById('modal-name').innerText = player.name;
+            document.getElementById('modal-role').innerText = player.role;
+            document.getElementById('modal-text').innerText = player.text;
+            document.getElementById('modal-avatar').style.backgroundImage = `url('${player.img}')`;
+
+            document.getElementById('modal').classList.add('active');
+            document.getElementById('overlay').classList.add('active');
+        }
+
+        function closeModal() {
+            activeLineTarget = null;
+            drawConstellation();
+            document.getElementById('modal').classList.remove('active');
+            document.getElementById('overlay').classList.remove('active');
+        }
+
+        // Запуск рендеринга сразу при загрузке страницы
+        window.onload = () => {
+            createStars();
+            resizeCanvas();
+        };
+    </script>
+</body>
+</html>
