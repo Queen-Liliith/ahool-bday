@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,7 +55,6 @@
             font-size: 1rem;
         }
 
-        /* Звезды-аватарки */
         .star {
             position: absolute;
             z-index: 3;
@@ -71,7 +70,6 @@
             background-position: center;
         }
 
-        /* Особый стиль для звезды именинника */
         .star.birthday-boy {
             width: 75px;
             height: 75px;
@@ -89,7 +87,6 @@
             box-shadow: 0 0 35px rgba(255, 183, 3, 0.8);
         }
 
-        /* Названия игроков под звездами */
         .star-name {
             position: absolute;
             bottom: -25px;
@@ -105,7 +102,6 @@
             border: 1px solid rgba(58, 123, 213, 0.2);
         }
 
-        /* Модальное окно с посланием */
         .modal {
             position: fixed;
             top: 50%;
@@ -210,156 +206,43 @@
 </head>
 <body>
 
-    <div id="canvas-container">
-        <canvas id="sky"></canvas>
-    </div>
-
-    <div class="interface">
-        <header>
-            <h1>3 Years on the Same Orbit</h1>
-            <p>Наше общее созвездие. Нажми на любую звезду команды.</p>
-        </header>
-
-        <!-- Сюда JS вставит звезды -->
-        <div id="constellation-map"></div>
-
-        <footer>
-            ДЛЯ НАШЕГО ДРУГА И СОЮЗНИКА С ЛЮБОВЬЮ ОТ Р4 & TEAM
-        </footer>
-    </div>
-
-    <!-- Модалка для вывода сообщений -->
-    <div class="overlay" id="overlay" onclick="closeModal()"></div>
-    <div class="modal" id="modal">
-        <button class="close-btn" onclick="closeModal()">&times;</button>
-        <div class="modal-header">
-            <div class="modal-avatar" id="modal-avatar"></div>
-            <div class="modal-title">
-                <h3 id="modal-name">Игрок</h3>
-                <span id="modal-role">Р4 / Союзник</span>
-            </div>
-        </div>
-        <div class="modal-text" id="modal-text">Текст поздравления...</div>
-    </div>
-
     <script>
-        // ТЕСТОВЫЕ ДАННЫЕ (Потом заменим на реальные аватарки и тексты ребят)
-        const players = [
-            { id: "bday", name: "Именинник 🎂", role: "Главный Герой", text: "Сегодня твой день! Посмотри на линии вокруг — это связи, которые мы построили за 3 года игры вместе.", x: 50, y: 50, isBday: true, img: "https://placekitten.com/150/150" },
-            { id: "p1", name: "Lillith", role: "Бывший Лидер / Друг", text: "Помню, как ты спокойно помогал решать проблемы, когда я рулила. С тобой в чатах всегда тепло и комфортно, игра перестала быть стрессом! С днем рождения!", x: 25, y: 30, img: "https://placekitten.com/100/100" },
-            { id: "p2", name: "Р4_Стратег", role: "Офицер R4", text: "Три года в одной лодке — это срок. Спасибо, что всегда стабильно прикрываешь тылы без лишних слов. С др, мужик!", x: 75, y: 25, img: "https://placekitten.com/101/101" },
-            { id: "p3", name: "Боец_Альянса", role: "Союзник", text: "С праздником! Просто лучший сокомандник, с которым всегда приятно поболтать вечерком после работы.", x: 30, y: 70, img: "https://placekitten.com/102/102" },
-            { id: "p4", name: "Офицер_Драма", role: "Офицер R4", text: "Ценю твой железный покой во время войн штатов. Удачи в реале, крутой семьи и спокойных игровых вечеров!", x: 70, y: 75, img: "https://placekitten.com/103/103" },
-            { id: "p5", name: "Старый_Друг", role: "Союзник", text: "Помнишь наши первые ивенты 3 года назад? Рад, что мы до сих пор играем на одной волне. С днюхой!", x: 50, y: 15, img: "https://placekitten.com/104/104" }
-        ];
+        const PLAYERS_DATA = [
+            // Именинник всегда должен быть первым и иметь параметр isBday: true. Координаты 50, 50 ставят его в центр.
+            { 
+                name: "Nickname 🎂", 
+                role: "The Birthday Boy", 
+                text: "Today is your day! Click on any star to read messages from your alliance team.", 
+                x: 50, 
+                y: 50, 
+                isBday: true, 
+                img: "https://placekitten.com/150/150" 
+            },
 
-        const canvas = document.getElementById('sky');
-        const ctx = canvas.getContext('2d');
-        let activeLineTarget = null;
+            // Игрок 1 (Пример Lillith)
+            { 
+                name: "Lillith", 
+                role: "Ally & Friend", 
+                text: "It's been an amazing 3 years playing side by side. Thank you for always bringing calm and good vibes into our chats!", 
+                x: 25, 
+                y: 30, 
+                img: "https://placekitten.com/100/100" 
+            },
 
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            drawConstellation();
-        }
+            // Игрок 2
+            { 
+                name: "Player_R4", 
+                role: "R4 Officer", 
+                text: "Happy Birthday, man! Thanks for being a reliable teammate all these years. Glad to be in the same orbit with you.", 
+                x: 75, 
+                y: 25, 
+                img: "https://placekitten.com/101/101" 
+            },
 
-        window.addEventListener('resize', resizeCanvas);
-
-        // Перевод процентов координат в реальные пиксели экрана
-        function getCoords(player) {
-            return {
-                x: (player.x / 100) * canvas.width,
-                y: (player.y / 100) * canvas.height
-            };
-        }
-
-        // Рисование космической сетки и линий
-        function drawConstellation() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            const bdayPlayer = players.find(p => p.isBday);
-            const bdayCoords = getCoords(bdayPlayer);
-
-            // 1. Рисуем фоновые тонкие линии между ВСЕМИ (эффект созвездия-сети)
-            ctx.strokeStyle = 'rgba(58, 123, 213, 0.15)';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < players.length; i++) {
-                for (let j = i + 1; j < players.length; j++) {
-                    const p1 = getCoords(players[i]);
-                    const p2 = getCoords(players[j]);
-                    ctx.beginPath();
-                    ctx.moveTo(p1.x, p1.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    ctx.stroke();
-                }
-            }
-
-            // 2. Если кликнули на игрока, подсвечиваем его прямую связь с именинником
-            if (activeLineTarget && !activeLineTarget.isBday) {
-                const targetCoords = getCoords(activeLineTarget);
-                ctx.strokeStyle = '#00d2ff';
-                ctx.lineWidth = 3;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = '#00d2ff';
-                
-                ctx.beginPath();
-                ctx.moveTo(bdayCoords.x, bdayCoords.y);
-                ctx.lineTo(targetCoords.x, targetCoords.y);
-                ctx.stroke();
-                
-                // Сбрасываем тени, чтобы не портить остальное
-                ctx.shadowBlur = 0;
-            }
-        }
-
-        // Создание элементов звезд на экране
-        function createStars() {
-            const mapContainer = document.getElementById('constellation-map');
-            mapContainer.innerHTML = '';
-
-            players.forEach(player => {
-                const star = document.createElement('div');
-                star.className = `star ${player.isBday ? 'birthday-boy' : ''}`;
-                star.style.left = `${player.x}%`;
-                star.style.top = `${player.y}%`;
-                
-                // Временные картинки заглушки (котята), потом будут аватарки
-                star.style.backgroundImage = `url('${player.img}')`;
-
-                const nameTag = document.createElement('div');
-                nameTag.className = 'star-name';
-                nameTag.innerText = player.name;
-                star.appendChild(nameTag);
-
-                star.onclick = () => openModal(player);
-
-                mapContainer.appendChild(star);
-            });
-        }
-
-        function openModal(player) {
-            activeLineTarget = player;
-            drawConstellation(); // Перерисовываем линию
-
-            document.getElementById('modal-name').innerText = player.name;
-            document.getElementById('modal-role').innerText = player.role;
-            document.getElementById('modal-text').innerText = player.text;
-            document.getElementById('modal-avatar').style.backgroundImage = `url('${player.img}')`;
-
-            document.getElementById('modal').classList.add('active');
-            document.getElementById('overlay').classList.add('active');
-        }
-
-        function closeModal() {
-            activeLineTarget = null;
-            drawConstellation();
-            document.getElementById('modal').classList.remove('active');
-            document.getElementById('overlay').classList.remove('active');
-        }
-
-        // Запуск
-        createStars();
-        resizeCanvas();
-    </script>
-</body>
-</html>
+            // Игрок 3
+            { 
+                name: "Fighter_XYZ", 
+                role: "Alliance Member", 
+                text: "Happy Birthday! It's always great to chat and hang out after a busy work day. Have an awesome one!", 
+                x: 30, 
+                y:
